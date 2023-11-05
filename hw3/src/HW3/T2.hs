@@ -1,3 +1,5 @@
+{-# LANGUAGE TupleSections #-}
+
 module HW3.T2
   ( distOption
   , wrapOption
@@ -79,7 +81,7 @@ wrapStream x = x :> wrapStream x
 distList :: (List a, List b) -> List (a, b)
 distList (Nil, _)     = Nil
 distList (_, Nil)     = Nil
-distList (x :. xs, y) = mapList (\yi -> (x, yi)) y ++ distList (xs, y)
+distList (x :. xs, y) = mapList (x,) y ++ distList (xs, y)
 
 wrapList :: a -> List a
 wrapList x = x :. Nil
