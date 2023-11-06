@@ -67,40 +67,28 @@ instance Fractional Expr where
   x / y = Op $ Div x y
   fromRational x = Val $ fromRational x
 
+evalBinary :: (Double -> Double -> Double) ->
+              (Double -> Double -> Prim Double) ->
+              Expr -> Expr -> State [Prim Double] Double
+evalBinary evalF logF lhsExpr rhsExpr = do
+  lhsVal <- eval lhsExpr
+  rhsVal <- eval rhsExpr
+  modifyState (logF lhsVal rhsVal :)
+  return $ evalF lhsVal rhsVal
+
+evalUnary :: (Double -> Double) ->
+              (Double -> Prim Double) ->
+              Expr -> State [Prim Double] Double
+evalUnary evalF logF expr = do
+  val <- eval expr
+  modifyState (logF val :)
+  return $ evalF val
+
 eval :: Expr -> State [Prim Double] Double
-
-eval (Val x) = return x
-
-eval (Op (Add lhsExpr rhsExpr)) = do
-  lhsVal <- eval lhsExpr
-  rhsVal <- eval rhsExpr
-  modifyState (Add lhsVal rhsVal :)
-  return $ lhsVal + rhsVal
-
-eval (Op (Sub lhsExpr rhsExpr)) = do
-  lhsVal <- eval lhsExpr
-  rhsVal <- eval rhsExpr
-  modifyState (Sub lhsVal rhsVal :)
-  return $ lhsVal - rhsVal
-
-eval (Op (Mul lhsExpr rhsExpr)) = do
-  lhsVal <- eval lhsExpr
-  rhsVal <- eval rhsExpr
-  modifyState (Mul lhsVal rhsVal :)
-  return $ lhsVal * rhsVal
-
-eval (Op (Div lhsExpr rhsExpr)) = do
-  lhsVal <- eval lhsExpr
-  rhsVal <- eval rhsExpr
-  modifyState (Div lhsVal rhsVal :)
-  return $ lhsVal / rhsVal
-
-eval (Op (Abs expr)) = do
-  val <- eval expr
-  modifyState (Abs val :)
-  return $ abs val
-
-eval (Op (Sgn expr)) = do
-  val <- eval expr
-  modifyState (Sgn val :)
-  return $ signum val
+eval (Val x)                    = return x
+eval (Op (Add lhsExpr rhsExpr)) = evalBinary (+) Add lhsExpr rhsExpr
+eval (Op (Sub lhsExpr rhsExpr)) = evalBinary (-) Sub lhsExpr rhsExpr
+eval (Op (Mul lhsExpr rhsExpr)) = evalBinary (*) Mul lhsExpr rhsExpr
+eval (Op (Div lhsExpr rhsExpr)) = evalBinary (/) Div lhsExpr rhsExpr
+eval (Op (Abs expr))            = evalUnary abs Abs expr
+eval (Op (Sgn expr))            = evalUnary signum Sgn expr
