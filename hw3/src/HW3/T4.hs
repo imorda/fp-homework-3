@@ -9,21 +9,22 @@ module HW3.T4
   , eval
   ) where
 
-import Control.Monad (join)
+import Control.Monad (ap)
 import HW3.T1
-
 newtype State s a = S { runS :: s -> Annotated s a }
 
 mapState :: (a -> b) -> State s a -> State s b
-mapState f stateA = do
-   a <- stateA
-   return $ f a
+mapState f (S runA) = S $ \s ->
+  let a :# newS = runA s in
+    f a :# newS
 
 wrapState :: a -> State s a
 wrapState a = S $ \s -> a :# s
 
 joinState :: State s (State s a) -> State s a
-joinState = join
+joinState (S runOuter) = S $ \s ->
+  let (S runInner) :# outerS = runOuter s in
+    runInner outerS
 
 modifyState :: (s -> s) -> State s ()
 modifyState f = S $ \s -> () :# f s
@@ -33,15 +34,10 @@ instance Functor (State s) where
 
 instance Applicative (State s) where
   pure = wrapState
-  (<*>) stateF stateA = do
-     f <- stateF
-     mapState f stateA
+  (<*>) = Control.Monad.ap
 
 instance Monad (State s) where
-  (>>=) (S runA) f = S $ \s ->
-    let a :# newS = runA s in
-      let S runB = f a in
-        runB newS
+  (>>=) stateA f = joinState $ mapState f stateA
 
 data Prim a =
     Add a a
